@@ -46,16 +46,23 @@
         .card-container.flow .bar-fill { background: linear-gradient(90deg, #7c3aed, #a855f7); }
         .bar-labels { display: flex; justify-content: space-between; font-size: 11px; color: #6b7280; }
 
+        .badge { font-size: 10px; font-weight: bold; background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; margin-left: 5px; }
+
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(3, 7, 18, 0.85); z-index: 1000; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
         .modal-content { background: #1f2937; border: 1px solid #374151; border-radius: 16px; width: 100%; max-width: 440px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #374151; padding-bottom: 8px; }
         .modal-title { font-weight: bold; color: #38bdf8; font-size: 16px; }
         .close-btn { background: none; border: none; color: #94a3b8; font-size: 24px; cursor: pointer; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 4px; text-transform: uppercase; font-weight: bold; }
-        input { width: 100%; padding: 10px; background: #030712; border: 1px solid #475569; border-radius: 8px; color: #fff; font-size: 14px; box-sizing: border-box; }
+        
+        .automation-section { background: #0f172a; padding: 12px; border-radius: 10px; border: 1px solid #334155; margin-bottom: 15px; }
+        .automation-title { font-size: 11px; font-weight: bold; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-size: 11px; color: #94a3b8; margin-bottom: 4px; text-transform: uppercase; font-weight: bold; }
+        input, select { width: 100%; padding: 10px; background: #030712; border: 1px solid #475569; border-radius: 8px; color: #fff; font-size: 14px; box-sizing: border-box; }
+        
         .submit-btn { width: 100%; padding: 12px; background: linear-gradient(90deg, #0284c7, #38bdf8); border: none; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; text-transform: uppercase; }
-        .history-section { margin-top: 15px; border-top: 1px solid #374151; padding-top: 10px; max-height: 120px; overflow-y: auto; font-size: 13px; }
+        .history-section { margin-top: 15px; border-top: 1px solid #374151; padding-top: 10px; max-height: 100px; overflow-y: auto; font-size: 13px; }
         .history-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(55, 65, 81, 0.4); }
         .del-btn { background: none; border: none; color: #ef4444; font-weight: bold; cursor: pointer; font-size: 16px; line-height: 1; padding-left: 5px; }
     </style>
@@ -63,7 +70,7 @@
 <body>
 
     <h1>Net Worth Grid Engine</h1>
-    <div class="subtitle">Control Dashboard v5 — Manual Mode</div>
+    <div class="subtitle">Control Dashboard v6 — Hybrid Automation Matrix</div>
     
     <div class="global-metrics-grid">
         <div class="nw-box networth">
@@ -109,15 +116,38 @@
                 <div class="modal-title" id="m-title">Account Details</div>
                 <button class="close-btn" onclick="closeModal()">&times;</button>
             </div>
+            
+            <!-- Recurring Autopay Rules Setup -->
+            <div class="automation-section">
+                <div class="automation-title">🤖 Recurring Automation Engine</div>
+                <div class="form-group">
+                    <label>Automation Cadence</label>
+                    <select id="auto-frequency" onchange="adjustFrequencyLabels()">
+                        <option value="none">Manual Only (Off)</option>
+                        <option value="weekly">Weekly Autopay</option>
+                        <option value="monthly">Monthly Autopay</option>
+                    </select>
+                </div>
+                <div class="form-group" id="auto-day-wrapper">
+                    <label id="auto-day-label">Trigger Day</label>
+                    <select id="auto-trigger-day"></select>
+                </div>
+                <div class="form-group">
+                    <label>Recurring Amount ($)</label>
+                    <input type="number" id="auto-amount" placeholder="0.00" step="0.01">
+                </div>
+            </div>
+
+            <!-- Manual Overrides -->
             <div class="form-group">
-                <label id="input-label">Log Transaction Amount ($)</label>
+                <label id="input-label">Log Manual Transaction Amount ($)</label>
                 <input type="number" id="entry-amount" placeholder="0.00" step="0.01">
             </div>
             <div class="form-group">
                 <label>Date</label>
                 <input type="date" id="entry-date">
             </div>
-            <button class="submit-btn" onclick="submitEntry()">Save Entry</button>
+            <button class="submit-btn" onclick="submitEntry()">Save Parameters</button>
             <div class="history-section" id="history-list"></div>
         </div>
     </div>
