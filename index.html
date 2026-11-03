@@ -1,676 +1,222 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- CRITICAL CHARACTER ENCODING FIX FOR MOJIBAKE GLITCHES -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Avalanche Debt & Savings Dashboard</title>
+    <title>Hybrid Automation Matrix Dashboard</title>
+    
+    <!-- Clean, semantic structural styles matching your layout preferences -->
     <style>
         :root {
-            --bg-color: #0d1117;
-            --panel-bg: #161b22;
-            --border-color: #30363d;
+            --bg-primary: #0f1319;
+            --bg-secondary: #161b22;
+            --border-color: #21262d;
+            --accent-green: #238636;
+            --accent-green-hover: #2ea043;
             --text-main: #c9d1d9;
             --text-muted: #8b949e;
-            --accent-primary: #ff5555;
-            --accent-secondary: #ff79c6;
-            --accent-success: #50fa7b;
-            --accent-blue: #8be9fd;
-            --accent-orange: #ffb86c;
+            --input-bg: #0d1117;
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
         }
 
         body {
-            background-color: var(--bg-color);
+            background-color: var(--bg-primary);
             color: var(--text-main);
-            padding: 16px;
-            font-size: 14px;
-            line-height: 1.5;
-        }
-
-        header {
-            margin-bottom: 20px;
+            padding: 20px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
-        }
-
-        @media (min-width: 768px) {
-            header {
-                flex-direction: row;
-                justify-content: space-between;
-                align-items: center;
-            }
-        }
-
-        h1 {
-            font-size: 1.5rem;
-            color: #fff;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .top-controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
             align-items: center;
         }
 
-        button, select, input {
-            background-color: #21262d;
-            border: 1px solid var(--border-color);
-            color: #fff;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 0.9rem;
-            outline: none;
+        .dashboard-container {
             width: 100%;
+            max-width: 480px; /* Clean, modern mobile viewport constraints */
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
         }
 
-        @media (min-width: 480px) {
-            button, select, input {
-                width: auto;
-            }
+        .matrix-card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 24px;
         }
 
-        button {
-            cursor: pointer;
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.15rem;
             font-weight: 600;
-            transition: background-color 0.2s;
-        }
-
-        button:hover {
-            background-color: #30363d;
-        }
-
-        button.primary {
-            background-color: #238636;
-            border-color: #2ea44f;
-        }
-
-        button.primary:hover {
-            background-color: #2ea44f;
-        }
-
-        .summary-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 12px;
             margin-bottom: 20px;
-        }
-
-        @media (min-width: 480px) {
-            .summary-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (min-width: 992px) {
-            .summary-grid {
-                grid-template-columns: repeat(4, 1fr);
-            }
-        }
-
-        .summary-card {
-            background-color: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .summary-card h3 {
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--text-muted);
-        }
-
-        .summary-card .value {
-            font-size: 1.6rem;
-            font-weight: 700;
-            color: #fff;
-        }
-
-        .progress-bar-container {
-            background-color: #21262d;
-            border-radius: 4px;
-            height: 6px;
-            width: 100%;
-            overflow: hidden;
-            margin-top: 4px;
-        }
-
-        .progress-bar {
-            height: 100%;
-            width: 0%;
-            transition: width 0.3s ease;
-        }
-
-        .main-workspace {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 16px;
-            margin-bottom: 20px;
-        }
-
-        @media (min-width: 992px) {
-            .main-workspace {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
-
-        .column-panel {
-            background-color: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .column-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
             border-bottom: 1px solid var(--border-color);
-            padding-bottom: 8px;
-            margin-bottom: 4px;
+            padding-bottom: 12px;
         }
 
-        .column-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #fff;
-        }
-
-        .account-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            max-height: 500px;
-            overflow-y: auto;
-            padding-right: 4px;
-        }
-
-        .account-card {
-            background-color: #1f242c;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            transition: opacity 0.2s, transform 0.2s;
-        }
-
-        .account-card.dimmed {
-            opacity: 0.4;
-        }
-
-        .card-row-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 8px;
-        }
-
-        .card-title-area {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 600;
-            color: #fff;
-        }
-
-        .card-checkbox {
-            width: 16px;
-            height: 16px;
-            cursor: pointer;
-        }
-
-        .card-balance {
-            font-weight: 700;
-            font-size: 1.1rem;
-        }
-
-        .card-meta-line {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-        }
-
-        .card-inputs-row {
+        .form-group-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-top: 4px;
-        }
-
-        .card-inputs-row label {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            font-size: 0.75rem;
-            color: var(--text-muted);
-        }
-
-        .card-inputs-row input {
-            font-size: 0.8rem;
-            padding: 6px;
-        }
-
-        .inline-calculator {
-            background-color: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 4px;
-            padding: 8px;
-            margin-top: 6px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .calc-header {
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: var(--accent-blue);
-            border-bottom: 1px dashed var(--border-color);
-            padding-bottom: 4px;
-        }
-
-        .calc-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-        }
-
-        .calc-result-text {
-            grid-column: span 2;
-            font-size: 0.8rem;
-            background-color: #0d1117;
-            padding: 6px;
-            border-radius: 4px;
-            color: var(--accent-success);
-            font-family: monospace;
-            text-align: center;
-        }
-
-        .card-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-            margin-top: 4px;
-        }
-
-        .card-actions button {
-            padding: 4px 8px;
-            font-size: 0.75rem;
-            width: auto;
-        }
-
-        .view-diagram {
-            background-color: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 16px;
-            margin-bottom: 20px;
-        }
-
-        .diagram-container {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-top: 12px;
-        }
-
-        .diagram-bar-wrapper {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .diagram-label {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.85rem;
-        }
-
-        .diagram-outer-bar {
-            background-color: #21262d;
-            height: 24px;
-            border-radius: 4px;
-            overflow: hidden;
-            width: 100%;
-        }
-
-        .diagram-fill-bar {
-            height: 100%;
-            transition: width 0.3s ease;
-        }
-
-        .control-matrix-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 16px;
-        }
-
-        @media (min-width: 768px) {
-            .control-matrix-grid {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
-
-        .form-section {
-            background-color: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .form-section h2 {
-            font-size: 1.1rem;
-            color: #fff;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 8px;
+            gap: 14px;
+            margin-bottom: 16px;
         }
 
         .form-group {
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 6px;
+            margin-bottom: 16px;
         }
 
-        .form-group label {
+        .form-group.no-margin {
+            margin-bottom: 0;
+        }
+
+        label {
             font-size: 0.85rem;
             color: var(--text-muted);
         }
 
-        .form-row-split {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-        }
-
-        .ledger-panel {
-            background-color: var(--panel-bg);
+        input, select {
+            background-color: var(--input-bg);
             border: 1px solid var(--border-color);
             border-radius: 6px;
-            padding: 16px;
-            margin-top: 20px;
-        }
-
-        .ledger-header {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 8px;
-            margin-bottom: 12px;
-        }
-
-        @media (min-width: 480px) {
-            .ledger-header {
-                flex-direction: row;
-                justify-content: space-between;
-                align-items: center;
-            }
-        }
-
-        .ledger-table-container {
+            color: var(--text-main);
+            padding: 12px; /* Touch-friendly element sizing */
+            font-size: 0.95rem;
             width: 100%;
-            overflow-x: auto;
+            outline: none;
+            transition: border-color 0.2s;
         }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-            font-size: 0.85rem;
-            min-width: 500px;
+        input:focus, select:focus {
+            border-color: #58a6ff;
         }
 
-        th, td {
-            padding: 10px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        th {
-            color: var(--text-muted);
+        /* Submit Action Styling */
+        .btn-action {
+            background-color: var(--accent-green);
+            color: #ffffff;
+            border: none;
+            border-radius: 6px;
+            padding: 14px;
+            font-size: 1rem;
             font-weight: 600;
-        }
-
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
+            cursor: pointer;
             width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
-            z-index: 1000;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s ease;
+            margin-top: 10px;
+            transition: background-color 0.2s;
+            text-align: center;
         }
 
-        .modal-overlay.active {
-            opacity: 1;
-            pointer-events: auto;
+        .btn-action:hover {
+            background-color: var(--accent-green-hover);
         }
 
-        .modal-content {
-            background-color: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
+        /* Ledger table viewport alignment adjustments */
+        .ledger-wrapper {
+            overflow-x: auto;
             width: 100%;
-            max-width: 450px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
         }
     </style>
 </head>
 <body>
 
-    <header>
-        <h1>â°ï¸ Avalanche Debt & Savings Dashboard</h1>
-        <div class="top-controls">
-            <select id="viewToggle" onchange="toggleViewMode()">
-                <option value="grid">Grid Workspace View</option>
-                <option value="diagram">Numeric Diagram View</option>
-            </select>
-            <button onclick="triggerResetState()" style="color: var(--accent-primary); border-color: rgba(255,85,85,0.4);">Reset Engine State</button>
-        </div>
-    </header>
+    <div class="dashboard-container">
 
-    <section class="summary-grid">
-        <div class="summary-card">
-            <h3>Net Worth Progress</h3>
-            <div class="value" id="statNetWorth">$0</div>
-            <div class="progress-bar-container"><div id="progressNetWorth" class="progress-bar" style="background-color: var(--accent-success);"></div></div>
-        </div>
-        <div class="summary-card">
-            <h3>Total Assets</h3>
-            <div class="value" id="statAssets">$0</div>
-            <div class="progress-bar-container"><div id="progressAssets" class="progress-bar" style="background-color: var(--accent-blue);"></div></div>
-        </div>
-        <div class="summary-card">
-            <h3>Total Debt</h3>
-            <div class="value" id="statDebt">$0</div>
-            <div class="progress-bar-container"><div id="progressDebt" class="progress-bar" style="background-color: var(--accent-primary);"></div></div>
-        </div>
-        <div class="summary-card">
-            <h3>Active Target Rate</h3>
-            <div class="value" id="statAvgApr">0%</div>
-            <div class="progress-bar-container"><div id="progressApr" class="progress-bar" style="background-color: var(--accent-orange);"></div></div>
-        </div>
-    </section>
-
-    <section id="diagramView" class="view-diagram" style="display: none;">
-        <h2>ð Structure Allocation Overview</h2>
-        <div class="diagram-container">
-            <div class="diagram-bar-wrapper">
-                <div class="diagram-label"><span>Total Active Wealth Assets</span><span id="diagramAssetLabel">$0</span></div>
-                <div class="diagram-outer-bar"><div id="diagramAssetBar" class="diagram-fill-bar" style="background-color: var(--accent-blue);"></div></div>
+        <!-- Module 1: Hybrid Automation Matrix -->
+        <section class="matrix-card">
+            <div class="card-header">
+                <span>ð</span> Hybrid Automation Matrix
             </div>
-            <div class="diagram-bar-wrapper">
-                <div class="diagram-label"><span>Total Avalanche Liabilities</span><span id="diagramDebtLabel">$0</span></div>
-                <div class="diagram-outer-bar"><div id="diagramDebtBar" class="diagram-fill-bar" style="background-color: var(--accent-primary);"></div></div>
-            </div>
-        </div>
-    </section>
-
-    <main class="main-workspace" id="gridWorkspace">
-        <div class="column-panel">
-            <div class="column-header">
-                <div class="column-title">Wealth Generation Assets</div>
-                <select id="assetSort" onchange="renderDashboard()" style="padding:4px; font-size:0.8rem;">
-                    <option value="default">Default Balance Order</option>
-                    <option value="balance-asc">Balance: Low to High</option>
-                    <option value="balance-desc">Balance: High to Low</option>
+            
+            <div class="form-group">
+                <label for="targetNode">Target Workspace Node</label>
+                <select id="targetNode">
+                    <option value="" disabled selected>Select Workspace...</option>
                 </select>
             </div>
-            <div class="account-list" id="assetContainer"></div>
-        </div>
 
-        <div class="column-panel">
-            <div class="column-header">
-                <div class="column-title">Avalanche Liabilities</div>
-                <select id="liabilitySort" onchange="renderDashboard()" style="padding:4px; font-size:0.8rem;">
-                    <option value="duedate">Sort: Coming Due Date</option>
-                    <option value="apr-desc">Sort: Highest APR First</option>
-                    <option value="balance-desc">Sort: Highest Balance First</option>
-                </select>
-            </div>
-            <div class="account-list" id="liabilityContainer"></div>
-        </div>
-    </main>
-
-    <section class="control-matrix-grid">
-        <div class="form-section">
-            <h2>â¡ Hybrid Automation Matrix</h2>
-            <div class="form-group">
-                <label for="matrixAccount">Target Workspace Node</label>
-                <select id="matrixAccount"></select>
-            </div>
-            <div class="form-row-split">
-                <div class="form-group">
-                    <label for="matrixAmount">Transaction Amount</label>
-                    <input type="number" id="matrixAmount" placeholder="0.00">
+            <div class="form-group-row">
+                <div class="form-group no-margin">
+                    <label for="transAmount">Transaction Amount</label>
+                    <input type="number" id="transAmount" placeholder="0.00" step="0.01">
                 </div>
-                <div class="form-group">
-                    <label for="matrixDate">Trigger Date</label>
-                    <input type="date" id="matrixDate">
+                <div class="form-group no-margin">
+                    <label for="triggerDate">Trigger Date</label>
+                    <input type="date" id="triggerDate">
                 </div>
             </div>
+
             <div class="form-group">
-                <label for="matrixInterval">Recurrence Cycle</label>
-                <select id="matrixInterval">
+                <label for="recurrence">Recurrence Cycle</label>
+                <select id="recurrence">
                     <option value="one-time">One-Time Event</option>
-                    <option value="weekly">Weekly Cycle</option>
-                    <option value="monthly">Monthly Cycle</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="biweekly">Bi-Weekly</option>
+                    <option value="monthly">Monthly</option>
                 </select>
             </div>
-            <button class="primary" onclick="submitMatrixTransaction()">Dispatch Automation Matrix</button>
-        </div>
 
-        <div class="form-section">
-            <h2>â Provision New Node Account</h2>
-            <div class="form-group">
-                <label for="newNodeName">Account Frame Title</label>
-                <input type="text" id="newNodeName" placeholder="e.g. Ally Savings, Discover Card">
+            <button type="button" class="btn-action">Dispatch Automation Matrix</button>
+        </section>
+
+        <!-- Module 2: Provision New Node Account -->
+        <section class="matrix-card">
+            <div class="card-header">
+                <span>ð³</span> Provision New Node Account
             </div>
+
             <div class="form-group">
-                <label for="newNodeClass">Classification Class</label>
-                <select id="newNodeClass" onchange="toggleFormGoalField()">
-                    <option value="liability">Avalanche Liability Node</option>
-                    <option value="asset">Wealth Generation Asset</option>
+                <label for="frameTitle">Account Frame Title</label>
+                <input type="text" id="frameTitle" placeholder="e.g. Ally Savings, Discover Card">
+            </div>
+
+            <div class="form-group">
+                <label for="classClass">Classification Class</label>
+                <select id="classClass">
+                    <option value="avalanche-liability">Avalanche Liability Node</option>
+                    <option value="asset-node">Asset Deployment Node</option>
                 </select>
             </div>
-            <div class="form-row-split">
-                <div class="form-group">
-                    <label id="balanceLabel" for="newNodeBalance">Stated Current Balance</label>
-                    <input type="number" id="newNodeBalance" placeholder="0.00">
-                </div>
-                <div class="form-group" id="aprFormGroup">
-                    <label for="newNodeApr"> Stated Rate Parameter (APR %)</label>
-                    <input type="text" id="newNodeApr" placeholder="e.g. 24.99 or Fixed Fee">
-                </div>
-                <div class="form-group" id="goalFormGroup" style="display:none;">
-                    <label for="newNodeGoal">Target Milestone Goal ($)</label>
-                    <input type="number" id="newNodeGoal" placeholder="e.g. 5000">
-                </div>
-            </div>
-            <button class="primary" onclick="provisionNewNode()">Deploy Active Node Entry</button>
-        </div>
-    </section>
 
-    <section class="ledger-panel">
-        <div class="ledger-header">
-            <h2>ð Unified Transaction Ledger Log</h2>
-            <button onclick="exportLedgerCsv()" style="background-color: #21262d; border-color: var(--border-color);">Export Spreadsheet Backup</button>
-        </div>
-        <div class="ledger-table-container">
-            <table id="ledgerTable">
-                <thead>
-                    <tr>
-                        <th>Execution Date</th>
-                        <th>Target Node</th>
-                        <th>Amount</th>
-                        <th>Cycle Type</th>
-                    </tr>
-                </thead>
-                <tbody id="ledgerBody"></tbody>
-            </table>
-        </div>
-    </section>
+            <div class="form-group-row">
+                <div class="form-group no-margin">
+                    <label for="currentBalance">Stated Current Balance</label>
+                    <input type="number" id="currentBalance" placeholder="0.00" step="0.01">
+                </div>
+                <div class="form-group no-margin">
+                    <label for="rateParam">Stated Rate Parameter (APR %)</label>
+                    <input type="text" id="rateParam" placeholder="e.g. 24.99 or Fixed">
+                </div>
+            </div>
 
-    <div id="editModal" class="modal-overlay">
-        <div class="modal-content">
-            <h2 id="modalHeaderTitle" style="color:#fff; font-size:1.2rem; border-bottom:1px solid var(--border-color); padding-bottom:8px;">âï¸ Edit Node Options</h2>
-            <input type="hidden" id="editNodeId">
-            <div class="form-group">
-                <label for="editNodeName">Account Frame Title</label>
-                <input type="text" id="editNodeName">
+            <button type="button" class="btn-action">Deploy Active Node Entry</button>
+        </section>
+
+        <!-- Module 3: Unified Transaction Ledger Log -->
+        <section class="matrix-card">
+            <div class="card-header">
+                <span>ð°</span> Unified Transaction Ledger Log
             </div>
-            <div class="form-group">
-                <label for="editNodeBalance">Current Balance ($)</label>
-                <input type="number" id="editNodeBalance" step="0.01">
+            
+            <div class="ledger-wrapper">
+                <!-- Ledger items can be injected dynamically here -->
             </div>
-            <div class="form-group" id="editNodeAprGroup">
-                <label for="editNodeApr">Stated Rate Parameter / APR (%)</label>
-                <input type="text" id="editNodeApr">
-            </div>
-            <div class="form-group" id="editNodeGoalGroup">
-                <label for="editNodeGoal">Target Milestone Goal ($)</label>
-                <input type="number" id="editNodeGoal" step="0.01">
-            </div>
-            <div style="display:flex; justify-content:space-between; gap:10px; margin-top:10px;">
-                <button onclick="closeEditModal()">Cancel</button>
-                <button onclick="deleteNodeEntry()" style="background-color:#da3637; border-color:#f85149;">Delete Node</button>
-                <button class="primary" onclick="saveNodeModifications()">Save Configurations</button>
-            </div>
-        </div>
+            
+            <button type="button" class="btn-action" style="background-color: #21262d; border: 1px solid var(--border-color);">
+                Export Spreadsheet Backup
+            </button>
+        </section>
+
     </div>
 
-
+</body>
+</html>
