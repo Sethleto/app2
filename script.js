@@ -1,597 +1,577 @@
- <script>
-        let accounts = [];
-        let ledger = [];
+<script>
+    // Master Initial Baseline State Array Dataset
+    const DEFAULT_ACCOUNTS = [
+        { id: "1", type: "liability", name: "1. Mission Lane Black", balance: 1410, apr: "33.99%", initial: 1410, target: 0, minPay: 45, dueDate: "2026-11-15", completed: false },
+        { id: "2", type: "liability", name: "2. Mission Lane Regular", balance: 2520, apr: "28.74%", initial: 2520, target: 0, minPay: 75, dueDate: "2026-11-10", completed: false },
+        { id: "3", type: "liability", name: "3. Ollo Card", balance: 1460, apr: "27.24%", initial: 1460, target: 0, minPay: 40, dueDate: "2026-11-20", completed: false },
+        { id: "4", type: "liability", name: "4. Happen Bank Loan", balance: 1720, apr: "25.49%", initial: 1720, target: 0, minPay: 90, dueDate: "2026-11-05", completed: false },
+        { id: "5", type: "liability", name: "5. OneMain Financial", balance: 7626, apr: "24.49%", initial: 7626, target: 0, minPay: 210, dueDate: "2026-11-18", completed: false },
+        { id: "6", type: "liability", name: "6. Affirm Financing", balance: 777, apr: "Fixed Fee", initial: 777, target: 0, minPay: 65, dueDate: "2026-11-25", completed: false },
+        { id: "7", type: "liability", name: "7. PayPal Credit", balance: 1580, apr: "Closed", initial: 1580, target: 0, minPay: 50, dueDate: "2026-11-12", completed: false },
+        { id: "8", type: "asset", name: "Emergency Savings", balance: 1200, initial: 1200, targetGoal: 5000 }
+    ];
 
-        const defaultAccounts = [
-            { id: '1', name: 'Mission Lane Black', type: 'liability', balance: 1410, initial: 1410, apr: '33.99%', target: 0, minPayment: '', dueDate: '', completed: false },
-            { id: '2', name: 'Mission Lane Regular', type: 'liability', balance: 2520, initial: 2520, apr: '28.74%', target: 0, minPayment: '', dueDate: '', completed: false },
-            { id: '3', name: 'Ollo Card', type: 'liability', balance: 1460, initial: 1460, apr: '27.24%', target: 0, minPayment: '', dueDate: '', completed: false },
-            { id: '4', name: 'Happen Bank Loan', type: 'liability', balance: 1720, initial: 1720, apr: '25.49%', target: 0, minPayment: '', dueDate: '', completed: false },
-            { id: '5', name: 'OneMain Financial', type: 'liability', balance: 7626, initial: 7626, apr: '24.49%', target: 0, minPayment: '', dueDate: '', completed: false },
-            { id: '6', name: 'Affirm Financing', type: 'liability', balance: 777, initial: 777, apr: 'Fixed Fee', target: 0, minPayment: '', dueDate: '', completed: false },
-            { id: '7', name: 'PayPal Credit', type: 'liability', balance: 1580, initial: 1580, apr: 'Closed', target: 0, minPayment: '', dueDate: '', completed: false }
-        ];
+    let accounts = [];
+    let ledger = [];
+    let isDiagramViewActive = false;
 
-        function initDashboard() {
-            const storedAccounts = localStorage.getItem('avalanche_accounts');
-            const storedLedger = localStorage.getItem('avalanche_ledger');
+    // Load state initialization hooks from localStorage
+    function initDashboardState() {
+        const storedAccounts = localStorage.getItem("avalanche_accounts_v3");
+        const storedLedger = localStorage.getItem("avalanche_ledger_v3");
 
-            if (storedAccounts) {
-                accounts = JSON.parse(storedAccounts);
+        if (storedAccounts) {
+            accounts = JSON.parse(storedAccounts);
+        } else {
+            accounts = JSON.parse(JSON.stringify(DEFAULT_ACCOUNTS));
+        }
+
+        if (storedLedger) {
+            ledger = JSON.parse(storedLedger);
+        } else {
+            ledger = [];
+        }
+
+        // Set default date parameter in the matrix picker form
+        document.getElementById("matrix-date").value = "2026-11-03";
+
+        renderDashboard();
+    }
+
+    function saveToLocalStorage() {
+        localStorage.setItem("avalanche_accounts_v3", JSON.stringify(accounts));
+        localStorage.setItem("avalanche_ledger_v3", JSON.stringify(ledger));
+    }
+
+    function resetEngineState() {
+        localStorage.removeItem("avalanche_accounts_v3");
+        localStorage.removeItem("avalanche_ledger_v3");
+        accounts = JSON.parse(JSON.stringify(DEFAULT_ACCOUNTS));
+        ledger = [];
+        renderDashboard();
+    }
+
+    function toggleProvGoalField() {
+        const cl = document.getElementById("prov-class").value;
+        document.getElementById("prov-goal-row").style.display = cl === 'asset' ? 'grid' : 'none';
+        document.getElementById("prov-apr-row").style.display = cl === 'liability' ? 'grid' : 'none';
+    }
+
+    function toggleDashboardView() {
+        isDiagramViewActive = !isDiagramViewActive;
+        document.getElementById("diagram-view").style.display = isDiagramViewActive ? "block" : "none";
+        document.getElementById("grid-view").style.display = isDiagramViewActive ? "none" : "grid";
+        if (isDiagramViewActive) renderDiagram();
+    }
+
+    // Calculations Summary Engines Update Pipeline
+    function updateMainSummaries() {
+        let totalAsset = 0;
+        let totalLiability = 0;
+        let totalSavingsGoals = 0;
+
+        accounts.forEach(acc => {
+            if (acc.type === 'asset') {
+                totalAsset += parseFloat(acc.balance || 0);
+                totalSavingsGoals += parseFloat(acc.targetGoal || 0);
             } else {
-                accounts = [...defaultAccounts];
-                localStorage.setItem('avalanche_accounts', JSON.stringify(accounts));
+                totalLiability += parseFloat(acc.balance || 0);
             }
+        });
 
-            if (storedLedger) {
-                ledger = JSON.parse(storedLedger);
+        const netWorth = totalAsset - totalLiability;
+        
+        // Populate Summary Node View Boxes Text fields
+        document.getElementById("net-worth-val").innerText = (netWorth >= 0 ? "" : "-") + "$" + Math.abs(netWorth).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+        document.getElementById("savings-val").innerText = "$" + totalAsset.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+        document.getElementById("debt-val").innerText = "$" + totalLiability.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+
+        // Calculate progress bars ratios dynamically
+        let nwPercent = totalAsset > 0 ? (netWorth / totalAsset) * 100 : 0;
+        document.getElementById("net-worth-progress").style.width = Math.max(0, Math.min(100, nwPercent)) + "%";
+
+        let assetGoalPercent = totalSavingsGoals > 0 ? (totalAsset / totalSavingsGoals) * 100 : 0;
+        document.getElementById("savings-progress").style.width = Math.min(100, assetGoalPercent) + "%";
+
+        // Liability progress compared to original values
+        let originalDebt = DEFAULT_ACCOUNTS.filter(a => a.type === 'liability').reduce((sum, a) => sum + a.initial, 0);
+        let debtPercent = originalDebt > 0 ? ((originalDebt - totalLiability) / originalDebt) * 100 : 0;
+        document.getElementById("debt-progress").style.width = Math.max(0, Math.min(100, debtPercent)) + "%";
+
+        // Total milestone completed growth percentage metric
+        let combinedProgress = assetGoalPercent;
+        document.getElementById("ratio-val").innerText = Math.round(combinedProgress) + "%";
+        document.getElementById("ratio-progress").style.width = Math.min(100, combinedProgress) + "%";
+    }
+
+    // Dynamic View Builders for Stacks Columns
+    function renderDashboard() {
+        updateMainSummaries();
+        saveToLocalStorage();
+
+        // Populate dropdown selectors in forms matrix arrays
+        const matrixSelect = document.getElementById("matrix-account-select");
+        matrixSelect.innerHTML = "";
+        accounts.forEach(acc => {
+            const opt = document.createElement("option");
+            opt.value = acc.id;
+            opt.innerText = acc.name;
+            matrixSelect.appendChild(opt);
+        });
+
+        // Split lists for sorting and filtering execution arrays
+        let assetList = accounts.filter(a => a.type === 'asset');
+        let liabilityList = accounts.filter(a => a.type === 'liability');
+
+        // Execute Asset Sorting Mechanics
+        const assetSortVal = document.getElementById("asset-sort").value;
+        if (assetSortVal === "balance-desc") assetList.sort((a,b) => b.balance - a.balance);
+        if (assetSortVal === "balance-asc") assetList.sort((a,b) => a.balance - b.balance);
+
+        // Execute Liability Filters
+        const liabFilterVal = document.getElementById("liability-filter").value;
+        if (liabFilterVal === "pending") {
+            liabilityList = liabilityList.filter(l => !l.completed);
+        }
+
+        // Execute Liability Active Sorting Engines (Upcoming Due Date default pipeline)
+        const liabSortVal = document.getElementById("liability-sort").value;
+        if (liabSortVal === "duedate") {
+            liabilityList.sort((a,b) => {
+                if (!a.dueDate) return 1;
+                if (!b.dueDate) return -1;
+                return new Date(a.dueDate) - new Date(b.dueDate);
+            });
+        } else if (liabSortVal === "apr") {
+            liabilityList.sort((a,b) => {
+                let aprA = parseFloat(a.apr) || 0;
+                let aprB = parseFloat(b.apr) || 0;
+                return aprB - aprA;
+            });
+        } else if (liabSortVal === "balance") {
+            liabilityList.sort((a,b) => a.balance - b.balance);
+        }
+
+        // Render Stacks Nodes inside HTML containers
+        const assetRoot = document.getElementById("asset-stack-root");
+        assetRoot.innerHTML = "";
+        assetList.forEach(acc => {
+            assetRoot.appendChild(buildAccountCardHTML(acc));
+        });
+
+        const liabilityRoot = document.getElementById("liability-stack-root");
+        liabilityRoot.innerHTML = "";
+        liabilityList.forEach(acc => {
+            liabilityRoot.appendChild(buildAccountCardHTML(acc));
+        });
+
+        // Refresh transaction matrix grid rows log
+        renderLedgerRows();
+        if (isDiagramViewActive) renderDiagram();
+    }
+
+    // Build Standalone Dynamic Card Elements Component Nodes Block Template
+    function buildAccountCardHTML(acc) {
+        const card = document.createElement("div");
+        card.className = `account-card ${acc.type} ${acc.completed ? 'completed' : ''}`;
+        card.id = `card-node-${acc.id}`;
+
+        let metaInfo = "";
+        let specificInputs = "";
+
+        if (acc.type === 'liability') {
+            metaInfo = `<div>APR: ${acc.apr}</div>`;
+            specificInputs = `
+                <div class="card-changeable-fields">
+                    <div class="field-group">
+                        <label>Min Payment ($)</label>
+                        <input type="number" id="minpay-input-${acc.id}" value="${acc.minPay || 0}" step="0.01" onchange="updateInlineCardData('${acc.id}', 'minPay', this.value)">
+                    </div>
+                    <div class="field-group">
+                        <label>Due Pay Date</label>
+                        <input type="date" id="duedate-input-${acc.id}" value="${acc.dueDate || ''}" onchange="updateInlineCardData('${acc.id}', 'dueDate', this.value)">
+                    </div>
+                </div>
+            `;
+        } else {
+            metaInfo = `<div>Goal Target: $${(acc.targetGoal || 0).toLocaleString()}</div>`;
+        }
+
+        // Checkbox element for tracking visual completed dimming matrix pipeline rows
+        const checkboxToggle = acc.type === 'liability' ? 
+            `<input type="checkbox" ${acc.completed ? 'checked' : ''} onclick="toggleCardCompletion('${acc.id}', event)">` : '';
+
+        // Pure Numeric Integrated Simulator subbox layout template markup
+        const simEngineUI = `
+            <div class="calc-box">
+                <div class="calc-box-title">ð§® Pure Numeric Projection Calculator</div>
+                <div class="calc-inputs">
+                    <div class="field-group">
+                        <label>Simulated Pay ($/mo)</label>
+                        <input type="number" id="sim-pay-${acc.id}" placeholder="e.g. 150" step="0.01" oninput="calculateCardSimulation('${acc.id}', 'pay')">
+                    </div>
+                    <div class="field-group">
+                        <label>Simulated Target Date</label>
+                        <input type="month" id="sim-date-${acc.id}" onchange="calculateCardSimulation('${acc.id}', 'date')">
+                    </div>
+                </div>
+                <div class="calc-result" id="sim-result-${acc.id}">Input values to simulate metric transformations...</div>
+                <button type="button" class="btn btn-blue" style="font-size:10px; padding:4px 8px; width:100%" onclick="applySimulationToCore('${acc.id}')">Apply To Account Data</button>
+            </div>
+        `;
+
+        card.innerHTML = `
+            <div class="card-header-row">
+                <div class="card-title-container">
+                    ${checkboxToggle}
+                    <span class="card-title">${acc.name}</span>
+                </div>
+                <span class="card-value">$${parseFloat(acc.balance || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+            </div>
+            <div class="card-meta">
+                ${metaInfo}
+                <div>Initial: $${acc.initial || acc.balance}</div>
+            </div>
+            ${specificInputs}
+            ${simEngineUI}
+            <div class="card-actions">
+                <button class="btn btn-blue" style="font-size:10px; padding:3px 8px;" onclick="openEditModalFrame('${acc.id}')">âï¸ Edit</button>
+            </div>
+        `;
+
+        return card;
+    }
+
+    // Dynamic Live Inline Inputs Data Sync Changes Handlers 
+    function updateInlineCardData(id, parameter, value) {
+        const acc = accounts.find(a => a.id === id);
+        if (acc) {
+            if (parameter === 'minPay' || parameter === 'balance') {
+                acc[parameter] = parseFloat(value) || 0;
             } else {
-                ledger = [];
+                acc[parameter] = value;
             }
+            saveToLocalStorage();
+            if (parameter === 'dueDate') {
+                // Instantly re-trigger structural pipeline rendering sorting cascade matrix arrays
+                renderDashboard();
+            } else {
+                updateMainSummaries();
+            }
+        }
+    }
 
-            // Set matrix default date to today
-            document.getElementById('matrixDate').value = new Date().toISOString().split('T')[0];
-
+    function toggleCardCompletion(id, event) {
+        event.stopPropagation();
+        const acc = accounts.find(a => a.id === id);
+        if (acc) {
+            acc.completed = event.target.checked;
             renderDashboard();
         }
+    }
 
-        function saveToStorage() {
-            localStorage.setItem('avalanche_accounts', JSON.stringify(accounts));
-            localStorage.setItem('avalanche_ledger', JSON.stringify(ledger));
-        }
+    // Bi-Directional Coupled Pure Numeric Financial Equations Script Pipeline
+    function calculateCardSimulation(id, primaryTriggerField) {
+        const acc = accounts.find(a => a.id === id);
+        if (!acc) return;
 
-        function triggerResetState() {
-            if (confirm("Reset Dashboard back to baseline defaults? This completely wipes custom configurations, added accounts, and logged transaction items.")) {
-                localStorage.removeItem('avalanche_accounts');
-                localStorage.removeItem('avalanche_ledger');
-                accounts = [...defaultAccounts];
-                ledger = [];
-                renderDashboard();
+        const payInput = document.getElementById(`sim-pay-${id}`);
+        const dateInput = document.getElementById(`sim-date-${id}`);
+        const resultDisplay = document.getElementById(`sim-result-${id}`);
+
+        let currentBalance = parseFloat(acc.balance) || 0;
+
+        if (primaryTriggerField === 'pay') {
+            let monthlyPayment = parseFloat(payInput.value) || 0;
+            if (monthlyPayment <= 0) {
+                resultDisplay.innerText = "Monthly payment must be greater than zero.";
+                return;
             }
-        }
 
-        function toggleViewMode() {
-            const mode = document.getElementById('viewToggle').value;
-            if (mode === 'grid') {
-                document.getElementById('gridWorkspace').style.display = 'grid';
-                document.getElementById('diagramView').style.display = 'none';
-            } else {
-                document.getElementById('gridWorkspace').style.display = 'none';
-                document.getElementById('diagramView').style.display = 'block';
-            }
-        }
-
-        function toggleFormGoalField() {
-            const cls = document.getElementById('newNodeClass').value;
-            if (cls === 'asset') {
-                document.getElementById('aprFormGroup').style.display = 'none';
-                document.getElementById('goalFormGroup').style.display = 'block';
-                document.getElementById('balanceLabel').innerText = "Current Balance ($)";
-            } else {
-                document.getElementById('aprFormGroup').style.display = 'block';
-                document.getElementById('goalFormGroup').style.display = 'none';
-                document.getElementById('balanceLabel').innerText = "Stated Current Balance";
-            }
-        }
-
-        function calculateMetrics() {
-            let totalAssets = 0;
-            let totalDebt = 0;
-            let totalAprWeights = 0;
-            let aprTrackedCount = 0;
-
-            accounts.forEach(acc => {
-                if (acc.type === 'asset') {
-                    totalAssets += parseFloat(acc.balance || 0);
-                } else {
-                    totalDebt += parseFloat(acc.balance || 0);
-                    let aprNum = parseFloat(acc.apr);
-                    if (!isNaN(aprNum)) {
-                        totalAprWeights += aprNum;
-                        aprTrackedCount++;
+            if (acc.type === 'liability') {
+                let apr = parseFloat(acc.apr) || 0;
+                if (apr > 0) {
+                    let monthlyRate = (apr / 100) / 12;
+                    // Check if payment covers interest
+                    if (monthlyPayment <= currentBalance * monthlyRate) {
+                        resultDisplay.innerText = "â ï¸ Payment is too low to cover monthly interest accrual.";
+                        return;
                     }
-                }
-            });
-
-            let netWorth = totalAssets - totalDebt;
-            let avgApr = aprTrackedCount > 0 ? (totalAprWeights / aprTrackedCount).toFixed(2) + '%' : '0.00%';
-
-            document.getElementById('statNetWorth').innerText = (netWorth >= 0 ? '$' : '-$') + Math.abs(netWorth).toLocaleString();
-            document.getElementById('statAssets').innerText = '$' + totalAssets.toLocaleString();
-            document.getElementById('statDebt').innerText = '$' + totalDebt.toLocaleString();
-            document.getElementById('statAvgApr').innerText = avgApr;
-
-            // Calculate fill percentages for lines
-            let assetGoal = 50000; 
-            let debtBaseline = 25000;
-
-            document.getElementById('progressNetWorth').style.width = Math.min(Math.max((netWorth + 10000) / 60000 * 100, 0), 100) + '%';
-            document.getElementById('progressAssets').style.width = Math.min((totalAssets / assetGoal) * 100, 100) + '%';
-            document.getElementById('progressDebt').style.width = Math.min((totalDebt / debtBaseline) * 100, 100) + '%';
-            document.getElementById('progressApr').style.width = aprTrackedCount > 0 ? Math.min((totalAprWeights / aprTrackedCount) / 35 * 100, 100) + '%' : '0%';
-
-            // Update diagrams view
-            document.getElementById('diagramAssetLabel').innerText = '$' + totalAssets.toLocaleString();
-            document.getElementById('diagramDebtLabel').innerText = '$' + totalDebt.toLocaleString();
-            
-            let maxBar = Math.max(totalAssets, totalDebt, 1);
-            document.getElementById('diagramAssetBar').style.width = (totalAssets / maxBar * 100) + '%';
-            document.getElementById('diagramDebtBar').style.width = (totalDebt / maxBar * 100) + '%';
-        }
-
-        function renderDashboard() {
-            calculateMetrics();
-
-            const assetContainer = document.getElementById('assetContainer');
-            const liabilityContainer = document.getElementById('liabilityContainer');
-            const matrixSelect = document.getElementById('matrixAccount');
-
-            assetContainer.innerHTML = '';
-            liabilityContainer.innerHTML = '';
-            matrixSelect.innerHTML = '';
-
-            // Split accounts
-            let assets = accounts.filter(a => a.type === 'asset');
-            let liabilities = accounts.filter(a => a.type === 'liability');
-
-            // Apply Sort Algorithms
-            const aSort = document.getElementById('assetSort').value;
-            if (aSort === 'balance-asc') assets.sort((a,b) => a.balance - b.balance);
-            if (aSort === 'balance-desc') assets.sort((a,b) => b.balance - a.balance);
-
-            const lSort = document.getElementById('liabilitySort').value;
-            if (lSort === 'apr-desc') {
-                liabilities.sort((a,b) => (parseFloat(b.apr) || 0) - (parseFloat(a.apr) || 0));
-            } else if (lSort === 'balance-desc') {
-                liabilities.sort((a,b) => b.balance - a.balance);
-            } else if (lSort === 'duedate') {
-                liabilities.sort((a,b) => {
-                    if (!a.dueDate) return 1;
-                    if (!b.dueDate) return -1;
-                    return new Date(a.dueDate) - new Date(b.dueDate);
-                });
-            }
-
-            // Populate options dropdown
-            accounts.forEach(acc => {
-                let opt = document.createElement('option');
-                opt.value = acc.id;
-                opt.innerText = acc.name + ` ($${acc.balance})`;
-                matrixSelect.appendChild(opt);
-            });
-
-            // Render Assets Column
-            if (assets.length === 0) {
-                assetContainer.innerHTML = '<div style="color:var(--text-muted); font-style:italic; padding:10px; text-align:center;">No active assets. Use form below to deploy nodes.</div>';
-            } else {
-                assets.forEach(acc => {
-                    let card = document.createElement('div');
-                    card.className = `account-card`;
-                    let goalValue = acc.goal || 10000;
-                    let pct = Math.min(((acc.balance / goalValue) * 100), 100).toFixed(0);
-
-                    card.innerHTML = `
-                        <div class="card-row-top">
-                            <div class="card-title-area">ð¢ ${acc.name}</div>
-                            <div class="card-balance">$${parseFloat(acc.balance).toLocaleString()}</div>
-                        </div>
-                        <div class="card-meta-line">
-                            <span>Goal Target: $${parseFloat(goalValue).toLocaleString()}</span>
-                            <span>Progress: ${pct}%</span>
-                        </div>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar" style="width: ${pct}%; background-color: var(--accent-blue);"></div>
-                        </div>
-                        <div class="inline-calculator">
-                            <div class="calc-header">Integrated Asset Velocity Engine</div>
-                            <div class="calc-grid">
-                                <label style="display:flex; flex-direction:column; gap:2px; font-size:0.75rem; color:var(--text-muted);">
-                                    Monthly Contrib ($)
-                                    <input type="number" id="calcAmt-${acc.id}" value="200" oninput="runVelocityCalculation('${acc.id}', 'asset')">
-                                </label>
-                                <label style="display:flex; flex-direction:column; gap:2px; font-size:0.75rem; color:var(--text-muted);">
-                                    Target Date Goal
-                                    <input type="month" id="calcDate-${acc.id}" onchange="runVelocityCalculation('${acc.id}', 'asset-date')">
-                                </label>
-                            </div>
-                            <div class="calc-result-text" id="calcResult-${acc.id}">Input values to forecast timeline...</div>
-                            <button style="margin-top:2px; padding:4px;" onclick="applySimulationData('${acc.id}', 'asset')">Apply to Account Data</button>
-                        </div>
-                        <div class="card-actions">
-                            <button onclick="openEditModal('${acc.id}')">âï¸ EDIT</button>
-                        </div>
-                    `;
-                    assetContainer.appendChild(card);
-                });
-            }
-
-            // Render Liabilities Column
-            if (liabilities.length === 0) {
-                liabilityContainer.innerHTML = '<div style="color:var(--text-muted); font-style:italic; padding:10px; text-align:center;">No liabilities logged. All clear!</div>';
-            } else {
-                liabilities.forEach(acc => {
-                    let card = document.createElement('div');
-                    card.className = `account-card ${acc.completed ? 'dimmed' : ''}`;
+                    // Amortization Month counts calculation formula
+                    let months = -Math.log(1 - (currentBalance * monthlyRate) / monthlyPayment) / Math.log(1 + monthlyRate);
+                    months = Math.ceil(months);
                     
-                    card.innerHTML = `
-                        <div class="card-row-top">
-                            <div class="card-title-area">
-                                <input type="checkbox" class="card-checkbox" ${acc.completed ? 'checked' : ''} onchange="toggleCardCompleted('${acc.id}', this.checked)">
-                                <span style="${acc.completed ? 'text-decoration: line-through;' : ''}">${acc.name}</span>
-                            </div>
-                            <div class="card-balance">$${parseFloat(acc.balance).toLocaleString()}</div>
-                        </div>
-                        <div class="card-meta-line">
-                            <span>APR: ${acc.apr}</span>
-                        </div>
-                        <div class="card-inputs-row">
-                            <label>
-                                Min Payment
-                                <input type="number" value="${acc.minPayment || ''}" placeholder="0.00" onchange="updateCardIndividualInputs('${acc.id}', 'minPayment', this.value)">
-                            </label>
-                            <label>
-                                Due Pay Date
-                                <input type="date" value="${acc.dueDate || ''}" onchange="updateCardIndividualInputs('${acc.id}', 'dueDate', this.value)">
-                            </label>
-                        </div>
-                        <div class="inline-calculator">
-                            <div class="calc-header">Integrated Debt Payoff Velocity Simulator</div>
-                            <div class="calc-grid">
-                                <label style="display:flex; flex-direction:column; gap:2px; font-size:0.75rem; color:var(--text-muted);">
-                                    Monthly Payment ($)
-                                    <input type="number" id="calcAmt-${acc.id}" value="${acc.minPayment || 50}" oninput="runVelocityCalculation('${acc.id}', 'liability')">
-                                </label>
-                                <label style="display:flex; flex-direction:column; gap:2px; font-size:0.75rem; color:var(--text-muted);">
-                                    Target Payoff Date
-                                    <input type="month" id="calcDate-${acc.id}" onchange="runVelocityCalculation('${acc.id}', 'liability-date')">
-                                </label>
-                            </div>
-                            <div class="calc-result-text" id="calcResult-${acc.id}">Input values to forecast timeline...</div>
-                            <button style="margin-top:2px; padding:4px;" onclick="applySimulationData('${acc.id}', 'liability')">Apply to Account Data</button>
-                        </div>
-                        <div class="card-actions">
-                            <button onclick="openEditModal('${acc.id}')">âï¸ EDIT</button>
-                        </div>
-                    `;
-                    liabilityContainer.appendChild(card);
-                    // Pre-run calculation for items
-                    runVelocityCalculation(acc.id, 'liability');
-                });
-            }
-
-            renderLedgerTable();
-        }
-
-        function toggleCardCompleted(id, isChecked) {
-            let acc = accounts.find(a => a.id === id);
-            if (acc) {
-                acc.completed = isChecked;
-                saveToStorage();
-                renderDashboard();
-            }
-        }
-
-        function updateCardIndividualInputs(id, key, val) {
-            let acc = accounts.find(a => a.id === id);
-            if (acc) {
-                acc[key] = val;
-                saveToStorage();
-            }
-        }
-
-        function runVelocityCalculation(id, context) {
-            let acc = accounts.find(a => a.id === id);
-            if (!acc) return;
-
-            const amtInput = document.getElementById(`calcAmt-${id}`);
-            const dateInput = document.getElementById(`calcDate-${id}`);
-            const resultBox = document.getElementById(`calcResult-${id}`);
-
-            if (!amtInput || !dateInput || !resultBox) return;
-
-            let balance = parseFloat(acc.balance || 0);
-            if (balance <= 0) {
-                resultBox.innerText = "Account balance is zero.";
-                return;
-            }
-
-            if (context === 'asset') {
-                // Change payment -> calculate target timeline date
-                let monthlyContrib = parseFloat(amtInput.value) || 0;
-                let goal = parseFloat(acc.goal) || 10000;
-                if (monthlyContrib <= 0) {
-                    resultBox.innerText = "Set a valid contribution amount.";
-                    return;
-                }
-                let needed = goal - balance;
-                if (needed <= 0) {
-                    resultBox.innerText = "Goal achieved!";
-                    return;
-                }
-                let months = Math.ceil(needed / monthlyContrib);
-                let targetDate = new Date();
-                targetDate.setMonth(targetDate.getMonth() + months);
-                let outStr = targetDate.toLocaleString('default', { month: 'short', year: 'numeric' });
-                resultBox.innerText = `Reaches target in ${months} mos (${outStr})`;
-                
-                // Set the corresponding input safely without looping
-                let y = targetDate.getFullYear();
-                let m = String(targetDate.getMonth() + 1).padStart(2, '0');
-                dateInput.value = `${y}-${m}`;
-
-            } else if (context === 'asset-date') {
-                // Change date -> calculate required monthly payment
-                if (!dateInput.value) return;
-                let parts = dateInput.value.split('-');
-                let targetDate = new Date(parts[0], parts[1] - 1, 1);
-                let now = new Date();
-                let months = (targetDate.getFullYear() - now.getFullYear()) * 12 + (targetDate.getMonth() - now.getMonth());
-                if (months <= 0) months = 1;
-                
-                let goal = parseFloat(acc.goal) || 10000;
-                let needed = goal - balance;
-                if (needed <= 0) {
-                    resultBox.innerText = "Goal achieved!";
-                    return;
-                }
-                let requiredPay = (needed / months).toFixed(2);
-                amtInput.value = requiredPay;
-                resultBox.innerText = `Requires $${requiredPay}/mo for ${months} months`;
-
-            } else if (context === 'liability') {
-                // Change payment -> calculate target timeline date
-                let monthlyPayment = parseFloat(amtInput.value) || 0;
-                let apr = parseFloat(acc.apr) || 0;
-                let monthlyRate = (apr / 100) / 12;
-
-                if (monthlyPayment <= 0) {
-                    resultBox.innerText = "Set a valid monthly payment.";
-                    return;
-                }
-
-                if (monthlyRate > 0 && monthlyPayment <= balance * monthlyRate) {
-                    resultBox.innerText = "Warning: Payment below monthly interest accrual.";
-                    return;
-                }
-
-                let months = 0;
-                let tempBalance = balance;
-                while (tempBalance > 0 && months < 360) {
-                    tempBalance += tempBalance * monthlyRate;
-                    tempBalance -= monthlyPayment;
-                    months++;
-                }
-
-                let targetDate = new Date();
-                targetDate.setMonth(targetDate.getMonth() + months);
-                let outStr = targetDate.toLocaleString('default', { month: 'short', year: 'numeric' });
-                resultBox.innerText = `Cleared in ${months} mos (${outStr})`;
-
-                let y = targetDate.getFullYear();
-                let m = String(targetDate.getMonth() + 1).padStart(2, '0');
-                dateInput.value = `${y}-${m}`;
-
-            } else if (context === 'liability-date') {
-                // Change date -> calculate required monthly payment
-                if (!dateInput.value) return;
-                let parts = dateInput.value.split('-');
-                let targetDate = new Date(parts[0], parts[1] - 1, 1);
-                let now = new Date();
-                let months = (targetDate.getFullYear() - now.getFullYear()) * 12 + (targetDate.getMonth() - now.getMonth());
-                if (months <= 0) months = 1;
-
-                let apr = parseFloat(acc.apr) || 0;
-                let monthlyRate = (apr / 100) / 12;
-
-                let requiredPay = 0;
-                if (monthlyRate === 0) {
-                    requiredPay = (balance / months).toFixed(2);
+                    let targetCalendar = calculateFutureMonthDate(months);
+                    resultDisplay.innerText = `Achieved: ${targetCalendar} (${months} Months Remaining)`;
+                    dateInput.value = formatYearMonthInputValue(months);
                 } else {
-                    requiredPay = ((balance * monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1)).toFixed(2);
+                    let months = Math.ceil(currentBalance / monthlyPayment);
+                    let targetCalendar = calculateFutureMonthDate(months);
+                    resultDisplay.innerText = `Achieved: ${targetCalendar} (${months} Months Remaining)`;
+                    dateInput.value = formatYearMonthInputValue(months);
                 }
-
-                if (!isNaN(requiredPay) && isFinite(requiredPay)) {
-                    amtInput.value = requiredPay;
-                    resultBox.innerText = `Requires $${requiredPay}/mo for ${months} months`;
-                }
-            }
-        }
-
-        function applySimulationData(id, type) {
-            let acc = accounts.find(a => a.id === id);
-            if (!acc) return;
-
-            const amtInput = document.getElementById(`calcAmt-${id}`);
-            if (!amtInput) return;
-
-            let val = parseFloat(amtInput.value);
-            if (val > 0) {
-                if (type === 'liability') {
-                    acc.minPayment = val;
-                }
-                alert(`Applied simulation monthly data factor ($${val}) to main record attributes.`);
-                saveToStorage();
-                renderDashboard();
-            }
-        }
-
-        function provisionNewNode() {
-            const name = document.getElementById('newNodeName').value.trim();
-            const type = document.getElementById('newNodeClass').value;
-            const balance = parseFloat(document.getElementById('newNodeBalance').value) || 0;
-            const apr = document.getElementById('newNodeApr').value.trim() || '0%';
-            const goal = parseFloat(document.getElementById('newNodeGoal').value) || 0;
-
-            if (!name) {
-                alert("Please declare an account title.");
-                return;
-            }
-
-            let newId = String(Date.now());
-            let newNode = {
-                id: newId,
-                name: name,
-                type: type,
-                balance: balance,
-                initial: balance,
-                apr: type === 'liability' ? apr : '0%',
-                goal: type === 'asset' ? goal : 0,
-                minPayment: '',
-                dueDate: '',
-                completed: false
-            };
-
-            accounts.push(newNode);
-            saveToStorage();
-            renderDashboard();
-
-            // Clear inputs
-            document.getElementById('newNodeName').value = '';
-            document.getElementById('newNodeBalance').value = '';
-            document.getElementById('newNodeApr').value = '';
-            document.getElementById('newNodeGoal').value = '';
-        }
-
-        function submitMatrixTransaction() {
-            const nodeId = document.getElementById('matrixAccount').value;
-            const amount = parseFloat(document.getElementById('matrixAmount').value) || 0;
-            const execDate = document.getElementById('matrixDate').value;
-            const cycle = document.getElementById('matrixInterval').value;
-
-            if (!nodeId || amount <= 0) {
-                alert("Ensure a destination active account node and a positive currency value are set.");
-                return;
-            }
-
-            let acc = accounts.find(a => a.id === nodeId);
-            if (!acc) return;
-
-            // Recalculate node balance framework
-            if (acc.type === 'asset') {
-                acc.balance += amount; // Save additions
             } else {
-                acc.balance = Math.max(acc.balance - amount, 0); // Paying down a liability shrinks balance
+                // Wealth generation asset target matrix calculations
+                let target = parseFloat(acc.targetGoal) || 0;
+                if (currentBalance >= target) {
+                    resultDisplay.innerText = "Savings Milestone goal is already achieved!";
+                    return;
+                }
+                let needed = target - currentBalance;
+                let months = Math.ceil(needed / monthlyPayment);
+                let targetCalendar = calculateFutureMonthDate(months);
+                resultDisplay.innerText = `Achieved: ${targetCalendar} (${months} Months Remaining)`;
+                dateInput.value = formatYearMonthInputValue(months);
             }
-
-            // Push transaction record log
-            ledger.unshift({
-                date: execDate,
-                accountName: acc.name,
-                amount: amount,
-                cycle: cycle
-            });
-
-            saveToStorage();
-            renderDashboard();
+        } else if (primaryTriggerField === 'date') {
+            if (!dateInput.value) return;
+            let chosenDate = new Date(dateInput.value + "-01");
+            let today = new Date("2026-11-01");
+            let monthsCount = (chosenDate.getFullYear() - today.getFullYear()) * 12 + (chosenDate.getMonth() - today.getMonth());
             
-            // clear entry amount line
-            document.getElementById('matrixAmount').value = '';
-        }
-
-        function renderLedgerTable() {
-            const tbody = document.getElementById('ledgerBody');
-            tbody.innerHTML = '';
-
-            if (ledger.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-muted); text-align:center; font-style:italic;">No logged transactional operations queued.</td></tr>';
+            if (monthsCount <= 0) {
+                resultDisplay.innerText = "Target date must be in the future.";
                 return;
             }
 
-            ledger.forEach(item => {
-                let row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${item.date}</td>
-                    <td style="font-weight:600; color:#fff;">${item.accountName}</td>
-                    <td style="color:var(--accent-success); font-weight:600;">$${parseFloat(item.amount).toLocaleString()}</td>
-                    <td style="text-transform: capitalize; color:var(--text-muted);">${item.cycle.replace('-', ' ')}</td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        function exportLedgerCsv() {
-            if (ledger.length === 0) {
-                alert("No structural transacted logs to backup export.");
-                return;
-            }
-
-            let csvContent = "data:text/csv;charset=utf-8,Execution Date,Target Node,Amount,Cycle Type\n";
-            ledger.forEach(l => {
-                csvContent += `${l.date},"${l.accountName}",${l.amount},${l.cycle}\n`;
-            });
-
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "transaction_ledger_backup.csv");
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        function openEditModal(id) {
-            let acc = accounts.find(a => a.id === id);
-            if (!acc) return;
-
-            document.getElementById('editNodeId').value = acc.id;
-            document.getElementById('editNodeName').value = acc.name;
-            document.getElementById('editNodeBalance').value = acc.balance;
-
-            if (acc.type === 'asset') {
-                document.getElementById('editNodeAprGroup').style.display = 'none';
-                document.getElementById('editNodeGoalGroup').style.display = 'block';
-                document.getElementById('editNodeGoal').value = acc.goal || 0;
+            if (acc.type === 'liability') {
+                let apr = parseFloat(acc.apr) || 0;
+                if (apr > 0) {
+                    let monthlyRate = (apr / 100) / 12;
+                    // Formula to find required fixed payment for explicit timeline horizon
+                    let reqPayment = (currentBalance * monthlyRate * Math.pow(1 + monthlyRate, monthsCount)) / (Math.pow(1 + monthlyRate, monthsCount) - 1);
+                    payInput.value = reqPayment.toFixed(2);
+                    resultDisplay.innerText = `Required Contribution: $${reqPayment.toFixed(2)}/mo over ${monthsCount} Mos.`;
+                } else {
+                    let reqPayment = currentBalance / monthsCount;
+                    payInput.value = reqPayment.toFixed(2);
+                    resultDisplay.innerText = `Required Contribution: $${reqPayment.toFixed(2)}/mo over ${monthsCount} Mos.`;
+                }
             } else {
-                document.getElementById('editNodeAprGroup').style.display = 'block';
-                document.getElementById('editNodeGoalGroup').style.display = 'none';
-                document.getElementById('editNodeApr').value = acc.apr || '';
+                let target = parseFloat(acc.targetGoal) || 0;
+                let needed = Math.max(0, target - currentBalance);
+                let reqPayment = needed / monthsCount;
+                payInput.value = reqPayment.toFixed(2);
+                resultDisplay.innerText = `Required Contribution: $${reqPayment.toFixed(2)}/mo over ${monthsCount} Mos.`;
             }
+        }
+    }
 
-            document.getElementById('editModal').classList.add('active');
+    function calculateFutureMonthDate(monthsTotal) {
+        let baseDate = new Date("2026-11-01");
+        baseDate.setMonth(baseDate.getMonth() + monthsTotal);
+        return baseDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    }
+
+    function formatYearMonthInputValue(monthsTotal) {
+        let baseDate = new Date("2026-11-01");
+        baseDate.setMonth(baseDate.getMonth() + monthsTotal);
+        let y = baseDate.getFullYear();
+        let m = String(baseDate.getMonth() + 1).padStart(2, '0');
+        return `${y}-${m}`;
+    }
+
+    function applySimulationToCore(id) {
+        const acc = accounts.find(a => a.id === id);
+        if (!acc) return;
+        const payInput = document.getElementById(`sim-pay-${id}`);
+        
+        if (payInput.value) {
+            let finalizedVal = parseFloat(payInput.value) || 0;
+            if (acc.type === 'liability') {
+                acc.minPay = finalizedVal;
+            }
+            alert(`Velocity tracking synced! Stated monthly allocation parameters for ${acc.name} updated to $${finalizedVal}.`);
+            renderDashboard();
+        }
+    }
+
+    // Hybrid Automation matrix form submit implementation pipeline
+    function handleMatrixSubmit(event) {
+        event.preventDefault();
+        const accId = document.getElementById("matrix-account-select").value;
+        const amount = parseFloat(document.getElementById("matrix-amount").value) || 0;
+        const dateString = document.getElementById("matrix-date").value;
+        const interval = document.getElementById("matrix-recurrence").value;
+
+        const acc = accounts.find(a => a.id === accId);
+        if (!acc) return;
+
+        // Mutate numeric data structures in real-time immediately
+        if (acc.type === 'liability') {
+            acc.balance = Math.max(0, acc.balance - amount);
+        } else {
+            acc.balance += amount;
         }
 
-        function closeEditModal() {
-            document.getElementById('editModal').classList.remove('active');
+        // Deploy new transaction matrix ledger log entry block row
+        const newLog = {
+            date: dateString,
+            accountName: acc.name,
+            amount: amount,
+            recurrence: interval
+        };
+        ledger.unshift(newLog);
+
+        // Reset input fields
+        document.getElementById("matrix-amount").value = "";
+
+        renderDashboard();
+    }
+
+    function handleProvisionSubmit(event) {
+        event.preventDefault();
+        const name = document.getElementById("prov-name").value;
+        const classification = document.getElementById("prov-class").value;
+        const balance = parseFloat(document.getElementById("prov-balance").value) || 0;
+        const apr = document.getElementById("prov-apr").value || "0%";
+        const targetGoal = parseFloat(document.getElementById("prov-goal").value) || 0;
+
+        const newId = String(Date.now());
+        const newNode = {
+            id: newId,
+            type: classification,
+            name: name,
+            balance: balance,
+            apr: classification === 'liability' ? apr : undefined,
+            initial: balance,
+            targetGoal: classification === 'asset' ? targetGoal : undefined,
+            minPay: classification === 'liability' ? 25 : undefined,
+            dueDate: classification === 'liability' ? "2026-11-01" : undefined,
+            completed: false
+        };
+
+        accounts.push(newNode);
+        
+        // Reset form
+        document.getElementById("prov-name").value = "";
+        document.getElementById("prov-balance").value = "";
+        document.getElementById("prov-apr").value = "";
+        document.getElementById("prov-goal").value = "";
+
+        renderDashboard();
+    }
+
+    function renderLedgerRows() {
+        const root = document.getElementById("ledger-rows-root");
+        if (ledger.length === 0) {
+            root.innerHTML = `<tr><td colspan="4" style="color: var(--text-muted); text-align: center;">No matrix transaction rows logged.</td></tr>`;
+            return;
         }
 
-        function saveNodeModifications() {
-            let id = document.getElementById('editNodeId').value;
-            let acc = accounts.find(a => a.id === id);
-            if (!acc) return;
+        root.innerHTML = "";
+        ledger.forEach(log => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>${log.date}</td>
+                <td style="color: var(--accent-blue)">${log.accountName}</td>
+                <td style="font-weight: bold;">$${log.amount.toFixed(2)}</td>
+                <td style="color: var(--text-muted); font-size: 11px;">${log.recurrence}</td>
+            `;
+            root.appendChild(tr);
+        });
+    }
 
-            let newName = document.getElementById('editNodeName').value.trim();
-            let newBal = parseFloat(document.getElementById('editNodeBalance').value) || 0;
+    // CSV Spreadsheet backup file generator engine download logic
+    function exportSpreadsheetCSV() {
+        if (ledger.length === 0) {
+            alert("No logged transaction entries found to construct file data streams.");
+            return;
+        }
 
-            if (!newName) {
-                alert("Account frame title cannot be left empty.");
-                return;
-            }
+        let csvString = "Timestamp Date,Target Node Account,Action Amount,Interval Cycle\n";
+        ledger.forEach(l => {
+            csvString += `"${l.date}","${l.accountName}",${l.amount},"${l.recurrence}"\n`;
+        });
 
-            acc.name = newName;
-            acc.balance = newBal;
+        const blobFile = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const downstreamUrl = URL.createObjectURL(blobFile);
+        const linkElement = document.createElement("a");
+        linkElement.setAttribute("href", downstreamUrl);
+        linkElement.setAttribute("download", "transaction_ledger_backup.csv");
+        document.body.appendChild(linkElement);
+        linkElement.click();
+        document.body.removeChild(linkElement);
+    }
 
-            if (acc.type === 'asset') {
-                acc.goal = parseFloat(document.getElementById('editNodeGoal').value) || 0;
+    // Render clean horizontal bar breakdowns inside diagram panel
+    function renderDiagram() {
+        const root = document.getElementById("diagram-bars-root");
+        root.innerHTML = "";
+
+        accounts.forEach(acc => {
+            const row = document.createElement("div");
+            row.className = "diagram-bar-row";
+
+            let maxValue = Math.max(...accounts.map(a => a.balance), 1000);
+            let barWidthRatio = (acc.balance / maxValue) * 100;
+            let colorHex = acc.type === 'asset' ? 'var(--accent-green)' : 'var(--primary)';
+
+            row.innerHTML = `
+                <div class="diagram-label-row">
+                    <span>${acc.name}</span>
+                    <span style="font-weight: bold; color: ${colorHex}">$${acc.balance.toLocaleString()}</span>
+                </div>
+                <div class="diagram-bar-outer">
+                    <div class="diagram-bar-inner" style="width: ${barWidthRatio}%; background-color: ${colorHex}"></div>
+                </div>
+            `;
+            root.appendChild(row);
+        });
+    }
+
+    // Modal Configuration Frame Helpers
+    function openEditModalFrame(id) {
+        const acc = accounts.find(a => a.id === id);
+        if (!acc) return;
+
+        document.getElementById("edit-idx").value = id;
+        document.getElementById("edit-name").value = acc.name;
+        document.getElementById("edit-balance").value = acc.balance;
+
+        if (acc.type === 'liability') {
+            document.getElementById("edit-apr-row").style.display = "grid";
+            document.getElementById("edit-goal-row").style.display = "none";
+            document.getElementById("edit-apr").value = acc.apr || "";
+        } else {
+            document.getElementById("edit-apr-row").style.display = "none";
+            document.getElementById("edit-goal-row").style.display = "grid";
+            document.getElementById("edit-goal").value = acc.targetGoal || 0;
+        }
+
+        document.getElementById("edit-modal").classList.add("active");
+    }
+
+    function closeEditModal() {
+        document.getElementById("edit-modal").classList.remove("active");
+    }
+
+    function saveNodeModifications() {
+        const id = document.getElementById("edit-idx").value;
+        const acc = accounts.find(a => a.id === id);
+        if (acc) {
+            acc.name = document.getElementById("edit-name").value;
+            acc.balance = parseFloat(document.getElementById("edit-balance").value) || 0;
+            if (acc.type === 'liability') {
+                acc.apr = document.getElementById("edit-apr").value;
             } else {
-                acc.apr = document.getElementById('editNodeApr').value.trim();
+                acc.targetGoal = parseFloat(document.getElementById("edit-goal").value) || 0;
             }
-
-            saveToStorage();
             closeEditModal();
             renderDashboard();
         }
+    }
 
-        function deleteNodeEntry() {
-            let id = document.getElementById('editNodeId').value;
-            if (confirm("Permanently strip this node entry out of your structural dashboard list map?")) {
-                accounts = accounts.filter(a => a.id !== id);
-                saveToStorage();
-                closeEditModal();
-                renderDashboard();
-            }
-        }
+    function deleteNodeTrigger() {
+        const id = document.getElementById("edit-idx").value;
+        accounts = accounts.filter(a => a.id !== id);
+        closeEditModal();
+        renderDashboard();
+    }
 
-        window.onload = initDashboard;
-    </script>
+    // Initialize core dashboard application layout modules on run
+    window.onload = initDashboardState;
+</script>
+
 </body>
 </html>
